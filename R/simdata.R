@@ -1,14 +1,16 @@
 library(pcalg)
+source("./R/misc.R")
 
-#initialize from bash loop
-rm(list = ls())
-bs <- c(5000, 10^6)
+
+#initialize from bash/other loop
+slurm <- TRUE
+bs <- c(1000, 5000, 10^6)
 ns <- c(50, 100, 500, 1000, 5000, 10000, 50000)
-ps <- c(2, 5, 10, 20)
+ps <- c(5, 10, 20)
 combos <- data.frame(bs = rep(bs, each = length(ns)*length(ps)),
                      ns = rep(ns, length(bs)*length(ps)),
                      ps = rep(rep(ps, each = length(ns)), length(bs)))
-k <- as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID"))
+k <- ifelse(slurm, as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID")), k)
 
 #settings
 b <- combos[k, "bs"]
@@ -16,16 +18,31 @@ p <- combos[k, "ps"]
 n <- combos[k, "ns"]
 verbose <- TRUE
 makeCoefMat <- FALSE
-makeCausalOrder <- TRUE
+makeCausalOrder <- FALSE
 standardizeData <- FALSE
+regpars <- c(0.1, 1) #note: data files w/o this info were for regpar = (0.1, 2)
 
-#####################################
-#DELETE THIS
-#####################################
-#b <- 100
-#p <- 5
-#n <- 100
-#####################################
+b; p; n;
+
+
+stdindicator <- ""
+coefmatindicator <- ""
+causalorderindicator <- ""
+if (standardizeData) stdindicator <- "_std"
+if (makeCoefMat) coefmatindicator <- "_coefmat"
+if (makeCausalOrder) causalorderindicator <- "_causord"
+filename <- paste("data_", "p", p, "_n", shortnum(n), 
+                  "_b", shortnum(b),
+                  stdindicator,
+                  coefmatindicator,
+                  causalorderindicator,
+                  "_beta", paste(regpars, collapse = "-"),
+                  ".rda", sep = "")
+
+if (file.exists(paste("data/", filename, sep = ""))) {
+  paste("Skipping - data file already exists.")
+  stop()
+}
 
 
 #helper functions
@@ -33,16 +50,6 @@ as.cpdag.adjm <- function(dag.adjm) {
   t(as(dag2cpdag(as(t(dag.adjm), "graphNEL")), "matrix"))
 }
 
-shortnum <- function(n) {
-  if (n < 1000) {
-    return(n)
-  } 
-  if (n < 10^6) {
-    return(paste(n %/% 1000, "K", sep = ""))
-  } else {
-    return(paste(n %/% 10^6, "M", sep = ""))
-  }
-}
 
 
 #data initialization
@@ -82,7 +89,7 @@ for (j in 1:b) {
   
   for (i in 2:p) {
     #regression parameters
-    pars <- runif(p, min = 0.1, max = 1) * sample(c(-1, 1), p, replace = TRUE, prob = c(0.4, 0.6))
+    pars <- runif(p, min = regpars[1], max = regpars[2]) * sample(c(-1, 1), p, replace = TRUE, prob = c(0.4, 0.6))
     usepars <- pars * adjm[i, ]
     
     if (makeCoefMat) thisCoefMat[i, ] <- usepars
@@ -100,11 +107,12 @@ for (j in 1:b) {
   thisLab <- thisLab[perm, perm]
   if (makeCoefMat) thisCoefMat <- thisCoefMat[perm, perm]
   
-  thisX <- cor(data)
+  thisX <- WGCNA::cor(data)
+  diag(thisX) <- 1 #rounding issues may result on diag cor = 0.9999... 
   
   #remove data, free memory
-  data <- NULL
-  gc()
+  #data <- NULL
+  #gc()
   
   #store output
   xdata[j, , , 1] <- thisX
@@ -117,19 +125,7 @@ for (j in 1:b) {
 }
 
 
-stdindicator <- ""
-coefmatindicator <- ""
-causalorderindicator <- ""
-if (standardizeData) stdindicator <- "_std"
-if (makeCoefMat) coefmatindicator <- "_coefmat"
-if (makeCausalOrder) causalorderindicator <- "_causord"
 
-filename <- paste("data_", "p", p, "_n", shortnum(n), 
-                  "_b", shortnum(b),
-                  stdindicator,
-                  coefmatindicator,
-                  causalorderindicator,
-                  ".rda", sep = "")
 savefiles <- c("useseed", "xdata", "ydata")
 if (makeCoefMat) savefiles <- c(savefiles, "ycoefmatdata")
 if (makeCausalOrder) savefiles <- c(savefiles, "orderdata")

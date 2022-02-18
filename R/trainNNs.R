@@ -4,40 +4,42 @@ library(keras)
 source("./R/misc.R")
 
 #Combo matrix n/p/architecture
-ns <- c(50, 100, 500, 1000, 5000, 10000, 50000)
-ps <- c(2, 5, 10, 20)
-archs <- c("N1", "N2")
-combos <- data.frame(archs = rep(archs, each = length(ns)*length(ps)),
-                     ns = rep(ns, length(archs)*length(ps)),
-                     ps = rep(rep(ps, each = length(ns)), length(archs)))
+ns <- c(1000, 5000, 50, 100, 500, 10000, 50000)
+ps <- c(5, 10, 20) 
+archs <- c("N6")
+combos <- comboframe(archs = archs,
+                     ps = ps,
+                     ns = ns)
 
 #Settings for this run
-nepochs <- 1000
-batchsize <- 100
+skipifdone <- FALSE
+nepochs <- 500 
+batchsize <- 2^8 
 k <- as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID"))
 p <- combos[k, "ps"]
 n <- combos[k, "ns"]
 arch <- combos[k, "archs"]
+datasubfix <- "_beta0.1-1"
+modelsubfix <- "_val10K_earlystop"
 
+p; n; arch
 
-######################
-# DELETE THIS
-p <- 2
-n <- 10000
-arch <- "N2"
-nepochs <- 2
-batchsize <- 100
-######################
+mname <- paste(arch, "_p", p, "_n", shortnum(n), datasubfix, modelsubfix, sep = "")
+if (skipifdone) {
+  if (file.exists(paste("./models/nn_", mname, ".h5", sep = ""))) {
+    print("File exists - skipping")
+    stop()
+  }
+}
+
 
 btrain <- shortnum(10^6)
-bval <- shortnum(1000)
-datasubfix <- "_causord"
+bval <- shortnum(10000)
 
 traindataname <- paste("data_p", p, "_n", shortnum(n), "_b", btrain, 
                        datasubfix, ".rda", sep = "")
 valdataname <- paste("data_p", p, "_n", shortnum(n), "_b", bval, 
                      datasubfix, ".rda", sep = "")
-
 
 #Load training data
 load(paste("./data/", traindataname, sep = ""))
@@ -51,7 +53,7 @@ valxdata <- xdata
 valydata <- ydata
 orderdata <- NULL #drop orderdata for now
 
-#Define NN architecture
+#Define NN architecture (and possibly prep data)
 source("./R/NNs.R")
 
 #compile NN
@@ -61,7 +63,7 @@ model %>%
     optimizer = "adam",
     metric = list("binary_accuracy", "Precision", "Recall"))
 
-#train NN
+#train NN 
 #note: provide val data in order to be able to see metrics along the way + check for 
 #overfitting
 history <- model %>% fit(x = trainxdata, 
@@ -70,11 +72,13 @@ history <- model %>% fit(x = trainxdata,
                          batch_size = batchsize,
                          validation_data = list(valxdata, valydata),
                          view_metrics = FALSE,
-                         verbose = 2)
+                         verbose = 2,
+                         callbacks = callback_early_stopping(patience = 50,
+                                                             restore_best_weights = TRUE))
 
 
 #save NN and fitting history
-mname <- paste(arch, "_p", p, "_n", shortnum(n), sep = "")
+
 
 save(list = c("history", "nepochs", "batchsize"), file = paste("./history/history_", mname, ".rda", sep = ""))
 save_model_hdf5(model, paste("./models/nn_", mname, ".h5", sep = ""))
