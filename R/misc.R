@@ -1,4 +1,3 @@
-source("R/probmat2amat.R")
 
 shortnum <- function(n) {
   if (n < 1000) {
@@ -31,23 +30,6 @@ comboframe <- function(...) {
 }
 
 
-as.graphNEL <- function(amat) {
-  as(t(amat), "graphNEL")
-}
-
-is_pdag <- function(amat) {
-  pcalg::isValidGraph(amat, "pdag")
-}
-
-is_cpdag <- function(amat) {
-  pcalg::isValidGraph(amat, "cpdag")
-}
-
-graph2amat <- function(graph) {
-  t(as(graph, "matrix"))
-}
-
-
 #apply function for matrix array with dim = (nrep, p, p) where
 #p is nrow = ncol for the matrices. Outputs same format. 
 matarray_apply <- function(matarray, ...) {
@@ -58,9 +40,7 @@ matarray_apply <- function(matarray, ...) {
 }
 
 
-
 pad4d_matrixarray <- function(matrixarray, target_slice_shape, value = 0) {
-  #  browser()
   thesedim <- dim(matrixarray)
   nrep <- thesedim[1]
   nrow <- thesedim[2]
@@ -75,20 +55,3 @@ pad4d_matrixarray <- function(matrixarray, target_slice_shape, value = 0) {
 }
 
 
-maxnedges <- function(p) {
-  sum(1:(p-1))
-}
-
-
-which2indicator <- function(x, p) {
-  out <- rep(0, p)
-  out[x] <- 1
-  out
-}
-
-essgraph2amat <- function(essgraph, p = length(essgraph$field(".nodes"))) {
-  inlist <- essgraph$field(".in.edges")
-  out <- t(sapply(inlist, which2indicator, p = p))
-  colnames(out) <- rownames(out)
-  out
-}

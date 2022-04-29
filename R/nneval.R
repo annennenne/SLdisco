@@ -2,6 +2,7 @@ source("./R/misc.R")
 source("./R/evalfunctions.R")
 library(graph)
 library(foreach)
+library(causalDisco)
 
 #paralization
 library(doParallel)

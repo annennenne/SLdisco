@@ -1,6 +1,8 @@
 source("./R/misc.R")
 source("./R/evalfunctions.R")
 
+library(causalDisco)
+
 #paralization
 library(doParallel)
 registerDoParallel(20)

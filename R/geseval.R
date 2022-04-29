@@ -3,6 +3,8 @@
 source("./R/misc.R")
 source("./R/evalfunctions.R")
 
+library(causalDisco)
+
 #parallization
 library(doParallel)
 registerDoParallel(60) 

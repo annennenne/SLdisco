@@ -1,5 +1,6 @@
 rm(list = ls())
 
+library(causalDisco)
 library(pcalg) 
 library(R.utils)
 source("./R/misc.R")
