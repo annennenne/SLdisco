@@ -1,7 +1,6 @@
 library(causalDisco)
 library(pcalg)
 source("R/misc.R")
-source("R/gausCorScore.R")
 source("R/evalfunctions.R")
 
 folder <- "/home/ahp/Dropbox/bscopiesDB/NNdisco/article/figures/"
