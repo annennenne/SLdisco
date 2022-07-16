@@ -10,6 +10,9 @@ cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
 nvals <- c(50, 100, 500, 1000, 5000, 10000, 50000)
 colscale <-   scale_color_manual("n", breaks = rev(nvals),
                                  values = cbPalette)
+
+colscale2 <-   scale_color_manual("Method", breaks = c("SLdisco-cutoff", "SLdisco-BPCO", "GES", "PC"),
+                                  values = cbPalette)
 longnames <- function(x) {
   x[x == "adj"] <- "adjacencies"
   x[x == "dir"] <- "orientations"
@@ -20,40 +23,62 @@ plabels <- function(x) {
 }
 
 adjmethlabels <- function(x) {
-  x[x == "cutoff"] <- "Cutoff"
+  x[x == "cutoff"] <- "SLdisco-cutoff"#"Cutoff"
   x[x == "greedy_backward"] <- "Greedy backwards"
   x[x == "greedy_forward"] <- "Greedy forward"
-  x[x == "bpco"] <- "Backwards PC orientation"
+  x[x == "bpco"] <- "SLdisco-BPCO" #"Backwards PC orientation"
   x
 }
 
 typemetlabels <- function(x) {
-  x[x == "adj:F1"] <- "Adjacency F1"
-  x[x == "adj:NPV"] <- "Adjacency NPV"
-  x[x == "dir:G1"] <- "Orientation G1" 
-  x[x == "dir:precision"] <- "Orientation precision" 
+  x[x == "adj:F1"] <- "Adjacency F1" #"F1 \n (adjacencies)"
+  x[x == "adj:NPV"] <- "Adjacency NPV" #"NPV \n (adjacencies)"
+  x[x == "dir:G1"] <- "Orientation G1" #"G1 \n (orientations)"
+  x[x == "dir:precision"] <- "Orientation precision" #"Precision \n (orientations)"
   x
 }
+
+
+metlabels <- function(x) {
+  x[x == "F1"] <- "F1 (informativeness)" #"F1 \n (adjacencies)"
+  x[x == "NPV"] <- "NPV (conservativeness)" #"NPV \n (adjacencies)"
+  x[x == "G1"] <- "G1 (informativeness)" #"G1 \n (orientations)"
+  x[x == "precision"] <- "Precision (conservativeness)" #"Precision \n (orientations)"
+  x
+}
+
+metlabels2 <- function(x) {
+  x[x == "F1"] <- "Adjacency F1" #"F1 \n (adjacencies)"
+  x[x == "NPV"] <- "Adjacency NPV" #"NPV \n (adjacencies)"
+  x[x == "G1"] <- "Orientation G1" #"G1 \n (orientations)"
+  x[x == "precision"] <- "Orientation precision" #"Precision \n (orientations)"
+  x
+}
+
+metlabels3 <- function(x) {
+  x[x == "es_est"] <- "Number of edges"
+}
+
 
 nedgescatlabels <- function(x) {
   paste("No. edges: ", x)
 }
 
+colalph <- 0.8
 
 source("R/misc.R")
 
-folder <- "/home/ahp/Dropbox/bscopiesDB/NNdisco/article/figures/"
-setwd("/home/ahp/Dropbox/bscopiesDB/NNdisco")
+folder <- "/home/ahp/Dropbox/bscopiesDB/SLdisco/article/figures/"
+setwd("/home/ahp/Dropbox/bscopiesDB/SLdisco")
 
-source("article/R/gather_nnevalres.R")
-source("article/R/gather_gesevalres.R")
-source("article/R/gather_pcevalres.R")
-source("article/R/gather_pcevalres_bynedges.R")
-source("article/R/gather_nnevalres_bynedges.R")
-source("article/R/gather_gesevalres_bynedges.R")
-
+source("gather_nnevalres.R")
+source("gather_gesevalres.R")
+source("gather_pcevalres.R")
+source("gather_nnevalres_bynedges.R")
 
 usepostproc <- c("cutoff", "bpco")
+usemetrics <- c("adj_NPV", "adj_F1", "dir_precision", "dir_G1", "nedges_est")
+usethresvals <- as.character(seq(0.1, 0.6, 0.1))
 
 nn_meanres <- nn_meanres[nn_meanres$adjmethods %in% usepostproc,]
 nn_meanres2 <- nn_meanres2[nn_meanres2$adjmethods %in% usepostproc,]
@@ -61,253 +86,118 @@ nn_meanres2 <- nn_meanres2[nn_meanres2$adjmethods %in% usepostproc,]
 nn_nedges_meanres <- nn_nedges_meanres[nn_nedges_meanres$adjmethods %in% usepostproc,]
 nn_nedges_meanres2 <- nn_nedges_meanres2[nn_nedges_meanres2$adjmethods %in% usepostproc,]
 
+nn_meanres3 <- nn_meanres2
+ges_meanres3 <- ges_meanres2
+pc_meanres3 <- pc_meanres2
 
-usethresvals <- as.character(c(0.01, 0.05, seq(0.1, 0.5, 0.1)))
+pc_meanres3$Method <- "PC"
+ges_meanres3$Method <- "GES"
+nn_meanres3$Method <- "SLdisco-BPCO"
+nn_meanres3$Method[nn_meanres3$adjmethods == "cutoff"] <- "SLdisco-cutoff"
+
+pc_meanres3 <- pc_meanres3[pc_meanres3$alphas == 0.1,]
+pc_meanres3 <- pc_meanres3[pc_meanres3$variable %in% usemetrics,]
+pc_meanres3 <- pc_meanres3[, c("ns", "value", "metric", "type", "p", "Method")]
+names(pc_meanres3)[1] <- "n"
+
+ges_meanres3 <- ges_meanres3[ges_meanres3$lambdas == "BIC",]
+ges_meanres3 <- ges_meanres3[ges_meanres3$variable %in% usemetrics,]
+ges_meanres3 <- ges_meanres3[, c("ns", "value", "metric", "type", "p", "Method")]
+names(ges_meanres3)[1] <- "n"
+
+nn_meanres3 <- nn_meanres3[(nn_meanres3$p == 5 & nn_meanres3$thresvals == "0.4") | 
+                           (nn_meanres3$p == 10 & nn_meanres3$thresvals == "0.4") |  
+                           (nn_meanres3$p == 20 & nn_meanres3$thresvals == "0.3"), ] 
+nn_meanres3 <- nn_meanres3[nn_meanres3$variable %in% usemetrics,]
+nn_meanres3 <- nn_meanres3[nn_meanres3$adjmethods %in% usepostproc,]
+nn_meanres3 <- nn_meanres3[, c("n", "value", "metric", "type", "p", "Method")]
+
+
+allres <- rbind(nn_meanres3, ges_meanres3, pc_meanres3)
+allres$ncat <- sapply(allres$n, shortnum)
+allres$ncat <- factor(allres$ncat, levels = c("50", "100", "500", "1K", "5K", "10K", "50K"))
 
 #############################################################################
-# Estimated number of edges vs. actual number of edges - ges comparison
+# Estimated number of edges vs. actual number of edges 
 #############################################################################
-
 true_no_edges <- summarise(group_by(nn_meanres, p, adjmethods), 
-                               nedges = mean(nedges_true),
-                        .groups = "keep")
+                           nedges = mean(nedges_true),
+                           .groups = "keep")
 
-ggplot(nn_meanres2[nn_meanres2$variable %in% c("nedges_est"),], 
+ggplot(nn_meanres2[nn_meanres2$variable %in% c("nedges_est") & 
+                     nn_meanres2$thresvals %in% usethresvals,], 
        aes(x = factor(thresvals), y = value,
            col = factor(n),
            group = factor(variable):factor(n))) +
   geom_hline(data = true_no_edges,
-            aes(yintercept = nedges),
-            col = "black",
-            size = 1) +
-  geom_hline(data = ges_meanres2[ges_meanres2$variable %in% c("nedges_est") &
-                                 ges_meanres2$lambdas == "BIC",],
-             aes(yintercept = value, col = factor(ns)),
-             alpha = 1) +
+             aes(yintercept = nedges),
+             col = "black") +
   geom_point() +
   geom_line() +
   colscale + theme_bw() +
-  theme(axis.text.x = element_text(size = 8, angle = 45, hjust = 1)) +
   facet_grid(p ~ adjmethods, scales = "free_y",
              labeller = labeller(p = plabels, adjmethods = adjmethlabels)) + 
-  ylab("") + xlab("Threshold") 
+  ylab("") + xlab(expression(tau)) 
 ggsave(paste(folder,
-             "nedges", ".png", sep  = ""), 
-       width = 8, height = 5)
+             "SLdisco-nedges", ".png", sep  = ""), 
+       width = 8, height = 4)
 
 
-#############################################################################  
-# Number of edges true vs. estimated - by quartiles 
-# comp. with GES (BIC)
-#############################################################################
-
-plots <- list()
-i <- 1
-  for (p in c(5, 10, 20)) {
-    for (method in c("SLdisco", "GES", "PC")) {
-      
-    minval <- min(nn_nedges_meanres[nn_nedges_meanres$p == p &
-                                  nn_nedges_meanres$adjmethods %in% "bpco", 
-                                  c("nedges_true", "nedges_est")])
-    if (p == 5) usethres <- "0.4"
-    if (p == 10) usethres <- "0.4" 
-    if (p == 20) usethres <- "0.3"
-    if (method == "SLdisco") {
-      usedata <- nn_nedges_meanres[nn_nedges_meanres$p == p &
-                                     nn_nedges_meanres$adjmethods %in% "bpco" &
-                                     nn_nedges_meanres$thresvals %in% usethres, ]
-    } else if (method == "GES") {
-      usedata <- ges_nedges_meanres[ges_nedges_meanres$p == p &
-                                       ges_nedges_meanres$lambdas == "BIC", ]
-    } else if (method == "PC") {
-      usedata <- pc_nedges_meanres[pc_nedges_meanres$p == p &
-                                    pc_nedges_meanres$alphas == 0.1, ]
-    }
-    usedata$nedges_true
-    
-    outplot <- ggplot(usedata,
-             aes(x = nedges_true,  y = nedges_est, col = n)) + 
-        geom_hline(yintercept = sum(1:(p-1)), lty = "dotted") + 
-        geom_vline(xintercept = sum(1:(p-1)), lty = "dotted") + 
-        geom_point() +
-        geom_line() + 
-        geom_abline(slope = 1, intercept = 0) +
-        expand_limits(x = floor(minval), y = floor(minval)) +
-        xlab("No. edges (true)") +
-        ylab("No. edges (estimated)") +
-      theme(axis.text.y = element_text(vjust = -0.7,
-                                       margin = margin(l = 20, r = -50)))
-    
-    plots[[i]] <- outplot
-    i <- i + 1
-  }
-}
-
-
-ggmatrix(plots, nrow = 3, ncol = 3,
-                xAxisLabels = c("SLdisco", "GES", "PC"),
-                yAxisLabels = paste("p =", c(5, 10, 20)),
-         legend = 1) +
-  theme_bw() + colscale
-
-ggsave(paste(folder, "nedgebytruth.png", sep = ""), width = 8, height = 7)
-
-#############################################################################
-#OVERVIEW PLOTS, MEAN RESULTS, F1 and NPV
-#############################################################################
-
-
-options(scipen = 0)
-lambda <- "BIC"
-
-
-for (tmcombo in list(c("adj", "F1"), c("adj", "NPV"), c("dir", "precision"),
-                     c("dir", "G1"))) {
-  type <- tmcombo[1]
-  usemetric <- tmcombo[2]
-  
-  ggplot(nn_meanres2[nn_meanres2$type == type &
-                     nn_meanres2$thresvals %in% usethresvals &
-                       nn_meanres2$metric == usemetric, ], 
-         aes(x = factor(thresvals), y = value,
-             col = factor(n), 
-             group = factor(n))) + 
-    geom_hline(data = ges_meanres2[ges_meanres2$lambdas == lambda &
-                                     ges_meanres2$type == type &
-                                     ges_meanres2$metric == usemetric, ], 
-               aes(yintercept = value, col = factor(ns)),
-               alpha = 0.5) +
-    geom_point() +
-    geom_line() +
-    facet_grid(p ~ adjmethods,
-              labeller = labeller(p = plabels, adjmethods = adjmethlabels)) + 
-    colscale + 
-    theme_bw() + 
-    theme(axis.text.x = element_text(size = 8, angle = 45, hjust = 1)) +
-    ylab("") + xlab("Threshold")
-  ggsave(paste(folder, type,
-               "res-", usemetric, ".png", sep = ""), width = 8, height = 5)
-}
-
-
-#############################################################################
-# Results stratified by number of edges  - ges-comparison
-#############################################################################
-
-use_adjmethods <- c("bpco")
-lambda <- "BIC"
-p <- 10
-    ggplot(nn_nedges_meanres2[nn_nedges_meanres2$p == p &
-                                nn_nedges_meanres2$type %in% c("adj") & 
-                                nn_nedges_meanres2$adjmethods %in% use_adjmethods &
-                                nn_nedges_meanres2$metric %in% c("F1", "NPV") & 
-                                nn_nedges_meanres2$thres %in% usethresvals, ], 
-           aes(x = factor(thresvals), y = value,
-               col = n, 
-               group = factor(n):factor(adjmethods))) + 
-      geom_hline(data = ges_nedges_meanres2[ges_nedges_meanres2$lambdas == lambda &
-                                              ges_nedges_meanres2$ps == p & 
-                                              ges_nedges_meanres2$type %in% c("adj") &
-                                              ges_nedges_meanres2$metric  %in% c("F1", "NPV"), ], 
-                 aes(yintercept = value, col = n),
-                 alpha = 0.5) +
-      geom_point() +
-      geom_line() +
-      facet_grid(nedges_cat ~metric,
-                 labeller = labeller(nedges_cat = nedgescatlabels)) +
-      scale_y_continuous(limits = c(0,1)) +
-      theme_bw() + colscale + 
-      theme(axis.text.x = element_text(size = 8, angle = 45, hjust = 1)) +
-      xlab("Threshold") + ylab("") 
-ggsave(paste(folder, "f1npv-bynedges-p10.png", sep  = ""), width = 8, height = 8)
-
-#############################################################################
-# Results stratified by number of edges  - ges-comparison - all mets
-#############################################################################
-
-use_adjmethods <- c("bpco")
-lambda <- "BIC"
-p <- 10
-ggplot(nn_nedges_meanres2[nn_nedges_meanres2$p == p &
-                            nn_nedges_meanres2$adjmethods %in% use_adjmethods &
-                            nn_nedges_meanres2$variable %in% c("adj_F1", "adj_NPV",
-                                                               "dir_precision", "dir_G1") &
-                            nn_nedges_meanres2$thres %in% usethresvals, ], 
-       aes(x = factor(thresvals), y = value,
-           col = n, 
-           group = factor(n):factor(adjmethods))) + 
-  geom_hline(data = ges_nedges_meanres2[ges_nedges_meanres2$lambdas == lambda &
-                                          ges_nedges_meanres2$ps == p & 
-                                          ges_nedges_meanres2$variable %in% 
-                                          c("adj_F1", "adj_NPV","dir_precision", "dir_G1"), ], 
-             aes(yintercept = value, col = n),
-             alpha = 0.5) +
-  geom_point() +
-  geom_line() +
-  facet_grid(nedges_cat ~ factor(type):factor(metric),
-             labeller = labeller(nedges_cat = nedgescatlabels,
-                                 `factor(type):factor(metric)` = typemetlabels)) +
-  scale_y_continuous(limits = c(0,1)) +
-  theme_bw() + colscale + 
-  theme(axis.text.x = element_text(size = 8, angle = 45, hjust = 1)) +
-  xlab("Threshold") + ylab("") 
-ggsave(paste(folder, "allmetrics-bynedges-p10.png", sep  = ""), width = 8, height = 8)
-
-
-
-    
 ##############################################################################
-### PC - GES COMPARISON ######################################################
+### Nedges - compare SLdisco, GES, PC ########################################
 ##############################################################################
 
-pvals <- c(5, 10, 20)
-options(scipen = 0)
-ggplot(pc_meanres2[pc_meanres2$type %in% c("adj") &
-                     pc_meanres2$metric %in% c("NPV", "F1") &
-                     pc_meanres2$ps %in% pvals,], aes(x = factor(alphas),
-                                                      y = value,
-                                                      col = factor(ns),
-                                                      group = factor(ns):factor(ps))) + 
-  geom_hline(data = ges_meanres2[ges_meanres2$lambdas == lambda &
-                                   ges_meanres2$type %in% c("adj") &
-                                   ges_meanres2$lambdas == "BIC" & 
-                                   ges_meanres2$metric %in% c("NPV", "F1") &
-                                   ges_meanres2$ps %in% pvals, ], 
-             aes(yintercept = value, col = factor(ns)),
-             alpha = 0.5) +
+ggplot(allres[allres$metric== "es_est",], aes(x = factor(n), y = value, 
+                                              col = Method, group = Method)) +
+  geom_hline(data = true_no_edges,
+             aes(yintercept = nedges),
+             col = "black") +
   geom_point() +
-  geom_line() +
-  facet_grid(p ~ metric, labeller = labeller(p = plabels)) +
-  scale_y_continuous(limits = c(0,1)) +
-  theme_bw() + colscale +
-  theme(axis.text.x = element_text(size = 8, angle = 45, hjust = 1)) +
-  xlab("Significance level") + ylab("") 
+  geom_line() + 
+  facet_grid(p ~ metric, labeller = labeller(p = plabels, metric = metlabels3),
+             scales = "free_y") +
+  colscale2 + theme_bw() +
+  xlab("n") +
+  ylab("") 
 ggsave(paste(folder,
-             "pc-ges-comparison-adjmetrics", ".png", sep  = ""), width = 8, height = 5)
+             "all-nedges", ".png", sep  = ""), 
+       width = 6, height = 3)
 
-ggplot(pc_meanres2[pc_meanres2$type %in% c("dir") &
-                     pc_meanres2$metric %in% c("G1", "precision") &
-                     pc_meanres2$ps %in% pvals,], aes(x = factor(alphas),
-                                                      y = value,
-                                                      col = factor(ns),
-                                                      group = factor(ns):factor(ps))) + 
-  geom_hline(data = ges_meanres2[ges_meanres2$lambdas == lambda &
-                                   ges_meanres2$type %in% c("dir") &
-                                   ges_meanres2$lambdas == "BIC" & 
-                                   ges_meanres2$metric %in% c("G1", "precision") &
-                                   ges_meanres2$ps %in% pvals, ], 
-             aes(yintercept = value, col = factor(ns)),
-             alpha = 0.5) +
-  geom_point() +
+
+##############################################################################
+### SLdisco, PC, GES adj metrics #############################################
+##############################################################################
+
+
+ggplot(allres[allres$type == "adj",], aes(x = factor(n), y = value, col = Method, group = Method)) +
+  geom_point() + 
+  facet_grid(p ~ metric, labeller = labeller(p = plabels, metric = metlabels2)) +
   geom_line() +
-  facet_grid(p ~ metric, labeller = labeller(p = plabels)) +
-  scale_y_continuous(limits = c(0,1)) +
-  theme_bw() + colscale +
-  theme(axis.text.x = element_text(size = 8, angle = 45, hjust = 1)) +
-  xlab("Significance level") + ylab("") 
-ggsave(paste(folder,
-             "pc-ges-comparison-dirmetrics", ".png", sep  = ""), width = 8, height = 5)
+  colscale2 + theme_bw() +
+  xlab("n") +
+  ylab("") 
 
+ggsave(paste(folder,
+             "adjmetrics", ".png", sep  = ""), 
+       width = 8, height = 4)
+
+##############################################################################
+### SLdisco, PC, GES dir metrics #############################################
+##############################################################################
+
+
+ggplot(allres[allres$type == "dir",], aes(x = factor(n), y = value, col = Method, group = Method)) +
+  geom_point() + 
+  facet_grid(p ~ metric, labeller = labeller(p = plabels, metric = metlabels2)) +
+  geom_line() +
+  xlab("n") +
+  ylab("") +
+  theme_bw() +
+  colscale2 + theme_bw() 
+
+ggsave(paste(folder,
+             "dirmetrics", ".png", sep  = ""), 
+       width = 8, height = 4)
 
 
 ##############################################################################
@@ -316,14 +206,14 @@ ggsave(paste(folder,
 
 options(scipen = 0)
 ggplot(pc_meanres2[(pc_meanres2$type %in% c("adj") & pc_meanres2$metric %in% c("NPV", "F1")) | 
-                   (pc_meanres2$type %in% c("dir") & pc_meanres2$metric %in% c("precision", "G1")),], 
+                     (pc_meanres2$type %in% c("dir") & pc_meanres2$metric %in% c("precision", "G1")),], 
        aes(x = factor(alphas), y = value, col = factor(ns), group = factor(ns):factor(ps))) + 
   geom_hline(data = ges_meanres2[ges_meanres2$lambdas == "BIC" &
-                                ((ges_meanres2$type %in% c("adj") & ges_meanres2$metric %in% c("NPV", "F1")) |
-                                 (ges_meanres2$type %in% c("dir") & 
-                                     ges_meanres2$metric %in% c("precision", "G1"))), ], 
+                                   ((ges_meanres2$type %in% c("adj") & ges_meanres2$metric %in% c("NPV", "F1")) |
+                                      (ges_meanres2$type %in% c("dir") & 
+                                         ges_meanres2$metric %in% c("precision", "G1"))), ], 
              aes(yintercept = value, col = factor(ns)),
-             alpha = 0.5) +
+             alpha = colalph) +
   geom_point() +
   geom_line() +
   facet_grid(p ~ factor(type):factor(metric),
@@ -336,69 +226,3 @@ ggplot(pc_meanres2[(pc_meanres2$type %in% c("adj") & pc_meanres2$metric %in% c("
 ggsave(paste(folder,
              "pc-ges-comparison-allmetrics", ".png", sep  = ""), width = 8, height = 5)
 
-
-##############################################################################
-### All metrics for SLdisco w cutoff #########################################
-##############################################################################
-
-options(scipen = 0)
-lambda <- "BIC"
-use_adjmethods <- "cutoff"
-
-    ggplot(nn_meanres2[((nn_meanres2$type == "adj" & nn_meanres2$metric == "NPV") |
-                        (nn_meanres2$type == "adj" & nn_meanres2$metric == "F1") |
-                        (nn_meanres2$type == "dir" & nn_meanres2$metric == "precision") | 
-                        (nn_meanres2$type == "dir" & nn_meanres2$metric == "G1")) &
-                       nn_meanres2$thresvals %in% usethresvals &
-                       nn_meanres2$adjmethods %in% use_adjmethods, ], 
-           aes(x = factor(thresvals), y = value,
-               col = factor(n), 
-               group = factor(n))) + 
-      geom_hline(data = ges_meanres2[((ges_meanres2$type == "adj" & ges_meanres2$metric == "NPV") |
-                                      (ges_meanres2$type == "adj" & ges_meanres2$metric == "F1") |
-                                      (ges_meanres2$type == "dir" & ges_meanres2$metric == "precision") | 
-                                      (ges_meanres2$type == "dir" & ges_meanres2$metric == "G1")) &
-                                     ges_meanres2$lambdas == lambda, ], 
-                 aes(yintercept = value, col = factor(ns)),
-                 alpha = 0.5) +
-      geom_point() +
-      geom_line() +
-     facet_grid(p ~ as.factor(type):as.factor(metric),
-                 labeller = labeller(p = plabels,
-                                     `as.factor(type):as.factor(metric)` = typemetlabels)) + 
-      colscale + 
-      theme_bw() + 
-      theme(axis.text.x = element_text(size = 8, angle = 45, hjust = 1)) +
-      ylab("") + xlab(expression(tau))
-    ggsave(paste("/home/ahp/Dropbox/bscopiesDB/Talks/SDSS2022/",
-                 "res-cutoff-allmetrics", ".png", sep = ""), 
-           width = 7.5, height = 3
-)
-    
-    
-##############################################################################
-### All metrics for ges with both scores #####################################
-##############################################################################
-    
-options(scipen = 0)
-ggplot(ges_meanres2[((ges_meanres2$type == "adj" & ges_meanres2$metric == "NPV") |
-                       (ges_meanres2$type == "adj" & ges_meanres2$metric == "F1") |
-                       (ges_meanres2$type == "dir" & ges_meanres2$metric == "precision") | 
-                       (ges_meanres2$type == "dir" & ges_meanres2$metric == "G1")), ],
-           aes(x = factor(lambdas), y = value,
-               col = factor(ns), group = factor(ns))) + 
-      geom_point() +
-      geom_line() +
-      facet_grid(p ~ as.factor(type):as.factor(metric),
-                 labeller = labeller(p = plabels,
-                                     `as.factor(type):as.factor(metric)` = typemetlabels)) + 
-      colscale + 
-      theme_bw() + 
-      theme(axis.text.x = element_text(size = 8, angle = 45, hjust = 1)) +
-      ylab("") + xlab("Score")
-ggsave(paste(folder,
-                 "ges-BIC-BIC2-comparison-allmet", ".png", sep  = ""), 
-       width = 8, height = 7
-)
-    
-    
